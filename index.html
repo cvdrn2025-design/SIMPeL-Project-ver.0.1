@@ -1131,10 +1131,13 @@ async function deleteCurrentProject(){
   const p = projects.find(x=>x.id===currentProjectId);
   if(!p) return;
   if(!confirm(`Hapus proyek "${p.nama}" beserta semua datanya? Tindakan ini tidak bisa dibatalkan.`)) return;
+
   try{
+    // 1. Hapus proyek dari Supabase
     const { error } = await sb.from('projects').delete().eq('id', currentProjectId);
     if(error) throw error;
-    // data anak (progress, material, dst.) terhapus otomatis lewat ON DELETE CASCADE di database
+
+    // 2. Hapus data dari array lokal (client-side)
     projects = projects.filter(x=>x.id!==currentProjectId);
     progressLog = progressLog.filter(x=>x.projectId!==currentProjectId);
     materialLog = materialLog.filter(x=>x.projectId!==currentProjectId);
@@ -1145,24 +1148,33 @@ async function deleteCurrentProject(){
     rabList = rabList.filter(x=>x.projectId!==currentProjectId);
     wageRates = wageRates.filter(x=>x.projectId!==currentProjectId);
     picList = picList.filter(x=>x.projectId!==currentProjectId);
+
+    // 3. Pilih proyek baru (jika masih ada) dan simpan ke localStorage
     currentProjectId = projects.length ? projects[0].id : null;
     localStorage.setItem(KEYS.current, currentProjectId || '');
-    
-  // Di dalam deleteCurrentProject, setelah sb.from('projects').delete() berhasil:
-  if(window.fbUserData && window.firebaseAuth && window.firebaseAuth.currentUser) {
-  const newCount = Math.max(0, (window.fbUserData.active_project_count || 0) - 1);
-  await updateDoc(doc(db, "users", window.firebaseAuth.currentUser.uid), {
-  active_project_count: newCount
-  });
-  window.fbUserData.active_project_count = newCount;
-}
- 
+
+    // 4. Update kuota user (dipisahkan agar error tidak menggagalkan proses hapus)
+    try {
+      if(window.fbUserData && window.firebaseAuth && window.firebaseAuth.currentUser) {
+        const newCount = Math.max(0, (window.fbUserData.active_project_count || 0) - 1);
+        await updateDoc(doc(db, "users", window.firebaseAuth.currentUser.uid), {
+          active_project_count: newCount
+        });
+        window.fbUserData.active_project_count = newCount;
+      }
+    } catch (updateErr) {
+      // Hanya log error, jangan tampilkan alert yang membingungkan
+      console.error('Gagal memperbarui kuota di Firestore:', updateErr);
+      // Opsional: Anda bisa menampilkan notifikasi kecil di sini jika perlu
+    }
+
+    // 5. Render ulang UI
     renderProjectSelect();
     renderAll();
   } catch(err){
     alert('Gagal menghapus proyek di Supabase: ' + err.message);
   }
-}
+  }
 
 // ---------- Tabs ----------
 function switchTab(name){
