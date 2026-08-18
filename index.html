@@ -1149,6 +1149,14 @@ async function deleteCurrentProject(){
     localStorage.setItem(KEYS.current, currentProjectId || '');
     renderProjectSelect();
     renderAll();
+    // Di dalam deleteCurrentProject, setelah sb.from('projects').delete() berhasil:
+if(window.fbUserData && window.firebaseAuth && window.firebaseAuth.currentUser) {
+  const newCount = Math.max(0, (window.fbUserData.active_project_count || 0) - 1);
+  await updateDoc(doc(db, "users", window.firebaseAuth.currentUser.uid), {
+    active_project_count: newCount
+  });
+  window.fbUserData.active_project_count = newCount;
+}
   } catch(err){
     alert('Gagal menghapus proyek di Supabase: ' + err.message);
   }
