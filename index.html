@@ -3418,31 +3418,50 @@ initApp();
   });
 
   // --- 3. Load data user dari Firestore ---
-  async function loadUserData(uid) {
-    try {
-      const userSnap = await getDoc(doc(db, "users", uid));
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        console.log("📦 Data pelanggan:", userData);
-        console.log("📦 Paket:", userData.plan || "basic");
-        console.log("📦 Batas proyek:", userData.projectLimit || "tidak terbatas");
-        
-        // Simpan ke variabel global untuk digunakan di UI nanti
-        window.fbUserPlan = userData.plan || "basic";
-        window.fbUserRole = userData.role || "staff";
-        window.fbUserLimit = userData.projectLimit || 999;
-        
-        // Panggil fungsi load data Supabase (jika ada)
-        // Contoh: if (typeof loadAllData === "function") loadAllData();
-        // Atau kamu bisa panggil di sini sesuai kebutuhan
-        
-      } else {
-        console.warn("⚠️ Data user tidak ditemukan di Firestore");
-      }
-    } catch (e) {
-      console.error("❌ Gagal memuat data user:", e);
+async function loadUserData(uid) {
+  try {
+    // Ambil data user
+    const userSnap = await getDoc(doc(db, "users", uid));
+    
+    let userData;
+    if (!userSnap.exists()) {
+      // Jika user baru, buat default
+      userData = { 
+        plan_id: "basic", 
+        subscription_status: "active",
+        active_project_count: 0,
+        add_on_count: 0
+      };
+      await setDoc(doc(db, "users", uid), userData);
+    } else {
+      userData = userSnap.data();
     }
+
+    // --- UBAHAN PENTING: Ambil data dari koleksi 'plan' ---
+    // Kita ambil dokumen 'basic', 'premium', atau 'pro_max' berdasarkan plan_id user
+    const planDoc = await getDoc(doc(db, "plan", userData.plan_id));
+    let planData = {};
+    if (planDoc.exists()) {
+      planData = planDoc.data();
+      // Karena di screenshot Anda nama field-nya 'project_limit', kita pakai itu
+      planData.project_limit = planData.project_limit || 1; 
+      
+      // Hitung batas efektif = batas plan + add_on
+      const addOns = userData.add_on_count || 0;
+      planData.effective_project_limit = planData.project_limit + addOns;
+    }
+
+    // Simpan ke variabel global agar bisa dipakai di fungsi lain
+    window.fbUserData = userData;   // Berisi: plan_id, active_project_count, dll
+    window.fbPlanData = planData;   // Berisi: name, price_monthly, project_limit, permissions, dll
+
+    console.log("📦 Status User:", window.fbUserData);
+    console.log("📦 Detail Paket:", window.fbPlanData);
+
+  } catch (e) {
+    console.error("❌ Gagal memuat data user & paket:", e);
   }
+}
 </script>
   
 </body>
