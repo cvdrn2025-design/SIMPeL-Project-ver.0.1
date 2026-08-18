@@ -1077,15 +1077,7 @@ async function saveNewProject(e){
     tanggal_selesai: document.getElementById('npSelesai').value || null
   };
   try{
-// Tambahkan ini setelah proyek sukses disimpan ke Supabase:
-if(window.fbUserData) {
-  const newCount = (window.fbUserData.active_project_count || 0) + 1;
-  // Update ke Firestore
-  await updateDoc(doc(db, "users", firebase.auth().currentUser.uid), {
-    active_project_count: newCount
-  });
-  window.fbUserData.active_project_count = newCount; // update variabel lokal
-}
+    
     const { data, error } = await sb.from('projects').insert(payload).select().single();
     if(error) throw error;
     const p = mapProject(data);
