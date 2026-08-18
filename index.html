@@ -985,10 +985,19 @@ document.getElementById('projectSelect').addEventListener('change', e=>{
   localStorage.setItem(KEYS.current, currentProjectId);
   renderAll();
 });
-
 let pendingRabItems = [];
 
-function openProjectModal() {
+function openProjectModal(){
+  if(currentRole() !== 'management'){
+    alert('Hanya peran Management yang bisa membuat proyek baru.');
+    return;
+  }
+  document.getElementById('formNewProject').reset();
+  pendingRabItems = [];
+  document.getElementById('npRabPreview').textContent = 'File harus punya baris header dengan kolom seperti "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan". Nilai Kontrak di atas akan otomatis terisi dari total RAB.';
+  document.getElementById('npKodeProyekPreview').textContent = 'Kode Proyek untuk Staff akan otomatis dibuat dari nomor ini.';
+  document.getElementById('projectModal').style.display = 'flex';
+}
   // --- CEK KUOTA SAAT KLIK TAMBAH PROYEK ---
   const userData = window.fbUserData;
   const planData = window.fbPlanData;
@@ -1021,45 +1030,6 @@ function openProjectModal() {
   document.getElementById('npRabPreview').textContent = '...';
   document.getElementById('projectModal').style.display = 'flex';
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
 
 function updateKodeProyekPreview(){
   const val = document.getElementById('npNomorKontrak').value;
