@@ -988,20 +988,78 @@ document.getElementById('projectSelect').addEventListener('change', e=>{
 
 let pendingRabItems = [];
 
-function openProjectModal(){
-  if(currentRole() !== 'management'){
-    alert('Hanya peran Management yang bisa membuat proyek baru.');
+function openProjectModal() {
+  // --- CEK KUOTA SAAT KLIK TAMBAH PROYEK ---
+  const userData = window.fbUserData;
+  const planData = window.fbPlanData;
+
+  if (!userData || !planData) {
+    alert("Sedang memverifikasi paket Anda. Silakan tunggu sebentar.");
     return;
   }
+
+  // 1. Cek izin membuat proyek
+  if (planData.permissions && planData.permissions.can_create === false) {
+    alert(`Maaf, paket ${planData.name || 'Basic'} tidak mengizinkan Anda membuat proyek baru. Silakan upgrade ke Premium/Pro Max.`);
+    return;
+  }
+
+  // 2. Cek sisa kuota (Proyek berjalan vs Batas)
+  const currentProjects = userData.active_project_count || 0;
+  const maxProjects = planData.effective_project_limit || 1;
+  const remaining = maxProjects - currentProjects;
+
+  if (remaining <= 0) {
+    alert(`Kuota proyek Anda habis! (Batas: ${maxProjects} proyek). Silakan beli Add-On dengan menghubungi marketing.`);
+    return; // Batalkan pembuatan proyek
+  }
+  // --- SELESAI CEK KUOTA ---
+
+  // Kode asli Anda untuk membuka modal:
   document.getElementById('formNewProject').reset();
   pendingRabItems = [];
-  document.getElementById('npRabPreview').textContent = 'File harus punya baris header dengan kolom seperti "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan". Nilai Kontrak di atas akan otomatis terisi dari total RAB.';
-  document.getElementById('npKodeProyekPreview').textContent = 'Kode Proyek untuk Staff akan otomatis dibuat dari nomor ini.';
+  document.getElementById('npRabPreview').textContent = '...';
   document.getElementById('projectModal').style.display = 'flex';
 }
-function closeProjectModal(){
-  document.getElementById('projectModal').style.display = 'none';
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 
 function updateKodeProyekPreview(){
   const val = document.getElementById('npNomorKontrak').value;
