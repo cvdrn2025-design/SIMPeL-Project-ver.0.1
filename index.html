@@ -1147,11 +1147,12 @@ async function deleteCurrentProject(){
     picList = picList.filter(x=>x.projectId!==currentProjectId);
     currentProjectId = projects.length ? projects[0].id : null;
     localStorage.setItem(KEYS.current, currentProjectId || '');
-    // Di dalam deleteCurrentProject, setelah sb.from('projects').delete() berhasil:
-    if(window.fbUserData && window.firebaseAuth && window.firebaseAuth.currentUser) {
-    const newCount = Math.max(0, (window.fbUserData.active_project_count || 0) - 1);
-    await updateDoc(doc(db, "users", window.firebaseAuth.currentUser.uid), {
-    active_project_count: newCount
+    
+  // Di dalam deleteCurrentProject, setelah sb.from('projects').delete() berhasil:
+  if(window.fbUserData && window.firebaseAuth && window.firebaseAuth.currentUser) {
+  const newCount = Math.max(0, (window.fbUserData.active_project_count || 0) - 1);
+  await updateDoc(doc(db, "users", window.firebaseAuth.currentUser.uid), {
+  active_project_count: newCount
   });
   window.fbUserData.active_project_count = newCount;
 }
