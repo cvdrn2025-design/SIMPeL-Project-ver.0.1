@@ -1114,15 +1114,6 @@ async function saveNewProject(e){
     }
     pendingRabItems = [];
 
-    // Tambahkan ini setelah proyek sukses disimpan ke Supabase:
-if(window.fbUserData) {
-  const newCount = (window.fbUserData.active_project_count || 0) + 1;
-  // Update ke Firestore
-  await updateDoc(doc(db, "users", firebase.auth().currentUser.uid), {
-    active_project_count: newCount
-  });
-  window.fbUserData.active_project_count = newCount; // update variabel lokal
-}
     closeProjectModal();
     renderAll();
   } catch(err){
