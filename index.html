@@ -997,10 +997,10 @@ function openProjectModal(){
   const userData = window.fbUserData;
   const planData = window.fbPlanData;
 
-  // Jika data paket/user belum termuat, kita hanya beri tahu, TAPI TOMBOL TIDAK DILOCK
+  // Jika data paket/user belum termuat
   if (!userData || !planData) {
-    alert("Data paket/user sedang dimuat. Silakan tunggu 2 detik, lalu klik tombol ini lagi.");
-    return; // Batalkan pembuatan proyek, tapi tombol tetap bisa diklik lagi nanti
+    alert("Data paket/user sedang dimuat. Silakan refresh halaman atau klik tombol ini lagi dalam 3 detik.");
+    return;
   }
 
   // 1. Cek izin membuat proyek
@@ -1018,6 +1018,15 @@ function openProjectModal(){
     alert(`Kuota proyek Anda habis! (Batas: ${maxProjects} proyek). Silakan beli Add-On.`);
     return; // Batalkan pembuatan proyek
   }
+  // --- SELESAI CEK KUOTA ---
+
+  // Kode asli untuk membuka modal (HANYA DIJALANKAN JIKA LOLOS CEK KUOTA)
+  document.getElementById('formNewProject').reset();
+  pendingRabItems = [];
+  document.getElementById('npRabPreview').textContent = 'File harus punya baris header dengan kolom seperti "Uraian Pekerjaan"...';
+  document.getElementById('npKodeProyekPreview').textContent = 'Kode Proyek untuk Staff akan otomatis dibuat dari nomor ini.';
+  document.getElementById('projectModal').style.display = 'flex';
+}
   // --- SELESAI CEK KUOTA ---
 
   // Kode asli untuk membuka modal
