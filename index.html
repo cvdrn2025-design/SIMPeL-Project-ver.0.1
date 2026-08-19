@@ -3435,6 +3435,7 @@ initApp();
   // --- 1. Pantau status auth (Auto-login jika sudah login) ---
   onAuthStateChanged(auth, (user) => {
     if (user) {
+      hideSplashScreen(); //
       console.log("✅ Firebase: User login aktif:", user.email);
       hideFbLogin();
       loadUserData(user.uid);
