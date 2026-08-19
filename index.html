@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login + Timeout</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; max-width: 90%; }
+        h2 { text-align: center; color: #333; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
+        button { width: 100%; padding: 10px; background: #10263E; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        #result { margin-top: 15px; text-align: center; font-weight: bold; }
+        .success { color: green; } .error { color: red; } .timeout { color: orange; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Uji Login & Jaringan</h2>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <div id="result"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdvX1FdRwlqAhbYE7_SpzEn2lsnYW1zH4",
+            authDomain: "apk-simpel-demo.firebaseapp.com",
+            projectId: "apk-simpel-demo",
+            storageBucket: "apk-simpel-demo.firebasestorage.app",
+            messagingSenderId: "539397750231",
+            appId: "1:539397750231:web:4f5f093f82135378ffdf92"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        function login() {
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const result = document.getElementById('result');
+
+            if (!email || !pass) { 
+                result.innerHTML = '<span class="error">Isi email & password!</span>'; 
+                return; 
+            }
+
+            result.innerHTML = '⏳ Menghubungi...';
+
+            // Timer 15 detik untuk mendeteksi koneksi macet
+            const timeoutId = setTimeout(() => {
+                result.innerHTML = '<span class="timeout">⚠️ TIMEOUT! Tidak ada respon dari Firebase. Cek: <br>1. Authorized domains sudah ditambahkan?<br>2. Koneksi internet/blokir provider?</span>';
+            }, 15000);
+
+            auth.signInWithEmailAndPassword(email, pass)
+                .then((user) => {
+                    clearTimeout(timeoutId);
+                    result.innerHTML = `<span class="success">✅ LOGIN BERHASIL! Email: ${user.user.email}</span>`;
+                })
+                .catch((error) => {
+                    clearTimeout(timeoutId);
+                    // Jika error muncul, kode errornya akan muncul di layar
+                    result.innerHTML = `<span class="error">❌ GAGAL: ${error.code} <br> ${error.message}</span>`;
+                });
+        }
+    </script>
+</body>
+</html>
