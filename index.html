@@ -3320,19 +3320,31 @@ async function initApp(){
 }
 
 // ---------- Splash Screen ----------
-function initSplash(){
-  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-    document.body.classList.add('reduced-motion');
-  }
+// -------- Splash Screen (Update) --------
+let splashHidden = false;
+
+function showSplashScreen(){
   const splash = document.getElementById('splashScreen');
-  const delay = document.body.classList.contains('reduced-motion') ? 400 : 2400;
-  setTimeout(()=>{
-    if(!splash) return;
-    splash.style.opacity = '0';
-    setTimeout(()=>{ splash.style.display = 'none'; }, 600);
-  }, delay);
+  if(splash){
+    splash.style.display = 'flex';
+    splash.style.opacity = '1';
+  }
 }
-initSplash();
+
+function hideSplashScreen(){
+  if(splashHidden) return; // Supaya tidak menjalankan animasi penutupan dua kali
+  splashHidden = true;
+  
+  const splash = document.getElementById('splashScreen');
+  if(!splash) return;
+  splash.style.opacity = '0';
+  setTimeout(()=>{ splash.style.display = 'none'; }, 600);
+}
+
+// Tampilkan splash saat halaman dimuat
+document.addEventListener('DOMContentLoaded', ()=>{
+  showSplashScreen();
+});
 
 initApp();
 
