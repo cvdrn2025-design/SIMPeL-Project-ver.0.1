@@ -66,12 +66,18 @@
 
             resultDiv.innerHTML = '⏳ Memproses... (menghubungi Firebase)';
 
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    resultDiv.innerHTML = `<span class="success">✅ LOGIN BERHASIL! Email: ${user.email}</span>`;
-                    console.log("Berhasil login:", user.email);
-                })
+            auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    // ... hapus sementara kode baca Firestore ...
+    document.getElementById('fbLoginContainer').style.display = 'none';
+    userRole = 'management'; // Set manual dulu agar dashboard terbuka
+    await loadAllData();
+    applyRoleUI();
+    renderAll();
+  } else {
+    // ...
+  }
+});
                 .catch((error) => {
                     // ===== PERBAIKAN PENTING DI SINI =====
                     // Kode error ini akan muncul langsung di layar HP Anda
