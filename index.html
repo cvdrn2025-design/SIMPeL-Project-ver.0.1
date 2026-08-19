@@ -1254,6 +1254,7 @@ function submitLogin(e){
 }
 
 function loginSuccess(role, isNew, matchedProject){
+  hideSplashScreen(); //
   sessionStorage.setItem('drn_session_role', role);
   if(role === 'staff' && matchedProject){
     sessionStorage.setItem('drn_staff_project_id', matchedProject.id);
