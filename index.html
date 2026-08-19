@@ -3322,6 +3322,7 @@ async function initApp(){
 
 // ---------- Splash Screen ----------
 // -------- Splash Screen (Update) --------
+// -------- Splash Screen Controller (Update) --------
 let splashHidden = false;
 
 function showSplashScreen(){
@@ -3333,7 +3334,7 @@ function showSplashScreen(){
 }
 
 function hideSplashScreen(){
-  if(splashHidden) return; // Supaya tidak menjalankan animasi penutupan dua kali
+  if(splashHidden) return;
   splashHidden = true;
   
   const splash = document.getElementById('splashScreen');
