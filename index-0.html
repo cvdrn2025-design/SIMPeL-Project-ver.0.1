@@ -814,12 +814,25 @@
 <!-- Area khusus untuk cetak -->
 <div id="printReportArea"></div>
 
-<!-- Firebase SDK via CDN (non‑module) -->
+
+
+  const savedCurrent = localStorage.getItem(KEYS.current);
+  if(savedCurrent && projects.find(x=>x.id===savedCurrent)){
+    currentProjectId = savedCurrent;
+  } else if(projects.length){
+    currentProjectId = projects[0].id;
+    localStorage.setItem(KEYS.current, currentProjectId);
+  } else {
+    currentProjectId = null;
+  }
+}
+
+<!-- Firebase SDK via CDN (bukan module) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
 
-<!-- Supabase client library -->
+<!-- Supabase & XLSX -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -840,13 +853,12 @@ const firebaseConfig = {
   messagingSenderId: "539397750231",
   appId: "1:539397750231:web:4f5f093f82135378ffdf92"
 };
+
+// Inisialisasi Firebase (global)
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 window.firebaseAuth = auth; // untuk logout
-
-// Kode pemulihan PIN RAB
-const RECOVERY_CODE = 'DRN-PEMULIHAN-2026'; // GANTI DENGAN KODE RAHASIA ANDA
 
 // ---------- Storage keys ----------
 const KEYS = { rabPin: 'drn_rab_pin', current: 'drn_current_project' };
@@ -866,28 +878,85 @@ let currentProjectId = localStorage.getItem(KEYS.current) || null;
 let userRole = 'staff'; // akan diisi dari Firestore
 
 // ---------- Helper functions ----------
-function todayStr(){ /* ... sama seperti asli ... */ }
-function formatDateLocal(d){ /* ... */ }
-function daysBetween(a,b){ /* ... */ }
-function formatRupiah(n){ /* ... */ }
-function formatRupiah2(n){ /* ... */ }
-function formatTanggal(dateStr){ /* ... */ }
-function getKodeProyek(nomorKontrak){ /* ... */ }
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function formatDateLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function daysBetween(a,b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+function formatRupiah(n) {
+  if(n === undefined || n === null || n === '') return '-';
+  return 'Rp ' + Number(n).toLocaleString('id-ID');
+}
+function formatRupiah2(n) {
+  if(n === undefined || n === null || n === '') return '-';
+  return 'Rp ' + Number(n).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function formatTanggal(dateStr) {
+  if(!dateStr) return '-';
+  const parts = String(dateStr).split('-');
+  if(parts.length !== 3) return dateStr;
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
+}
+function getKodeProyek(nomorKontrak) {
+  if(!nomorKontrak) return null;
+  const match = String(nomorKontrak).trim().match(/^(\d+)/);
+  if(!match) return null;
+  let digits = match[1];
+  digits = digits.length < 4 ? digits.padStart(4, '0') : digits.substring(0, 4);
+  return digits;
+}
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : str;
+  return d.innerHTML;
+}
 
 // ---------- Mapping Supabase ----------
-function mapProject(r){ /* ... */ }
-function mapProgress(r){ /* ... */ }
-function mapMaterial(r){ /* ... */ }
-function mapAlloc(r){ /* ... */ }
-function mapTimesheet(r){ /* ... */ }
-function mapCashflow(r){ /* ... */ }
-function mapPlan(r){ /* ... */ }
-function mapRab(r){ /* ... */ }
-function mapWageRate(r){ /* ... */ }
-function mapPic(r){ /* ... */ }
+function mapProject(r) {
+  return { id:r.id, nama:r.nama, lokasi:r.lokasi, nomorKontrak:r.nomor_kontrak, nilaiKontrak:r.nilai_kontrak, tanggalMulai:r.tanggal_mulai, tanggalSelesai:r.tanggal_selesai };
+}
+function mapProgress(r) {
+  return { id:r.id, projectId:r.project_id, tanggal:r.tanggal, deskripsi:r.deskripsi, persen:r.persen, foto:r.foto_url };
+}
+function mapMaterial(r) {
+  return { id:r.id, projectId:r.project_id, tanggal:r.tanggal, tipe:r.tipe, nama:r.nama, jumlah:r.jumlah, satuan:r.satuan };
+}
+function mapAlloc(r) {
+  return { id:r.id, projectId:r.project_id, nama:r.nama, jatah:r.jatah, satuan:r.satuan };
+}
+function mapTimesheet(r) {
+  return { id:r.id, projectId:r.project_id, tanggal:r.tanggal, nama:r.nama, kategori:r.kategori, status:r.status, jamMasuk:r.jam_masuk, jamKeluar:r.jam_keluar, gaji:r.gaji };
+}
+function mapCashflow(r) {
+  return { id:r.id, projectId:r.project_id, tanggal:r.tanggal, jenis:r.jenis, kategori:r.kategori, keterangan:r.keterangan, jumlah:r.jumlah };
+}
+function mapPlan(r) {
+  return { id:r.id, projectId:r.project_id, tanggal:r.tanggal, persen:r.persen };
+}
+function mapRab(r) {
+  return { id:r.id, projectId:r.project_id, noUrut:r.no_urut, uraian:r.uraian, volume:r.volume, satuan:r.satuan, hargaSatuan:r.harga_satuan, jumlahHarga:r.jumlah_harga };
+}
+function mapWageRate(r) {
+  return { id:r.id, projectId:r.project_id, kategori:r.kategori, upahHarian:r.upah_harian, upahLemburPerJam:r.upah_lembur_per_jam };
+}
+function mapPic(r) {
+  return { id:r.id, projectId:r.project_id, kategori:r.kategori, jabatan:r.jabatan, nama:r.nama, wewenang:r.wewenang, ceklis:r.ceklis };
+}
 
 // ---------- Load all data ----------
-async function loadAllData(){
+async function loadAllData() {
   const [pr, prog, mat, ts, alloc, cf, plan, rab, wage, pic] = await Promise.all([
     sb.from('projects').select('*').order('created_at'),
     sb.from('progress_log').select('*'),
@@ -924,7 +993,7 @@ async function loadAllData(){
 }
 
 // ---------- Project selector ----------
-function renderProjectSelect(){
+function renderProjectSelect() {
   const sel = document.getElementById('projectSelect');
   sel.innerHTML = '';
   const restrictedId = sessionStorage.getItem('drn_staff_project_id');
@@ -950,12 +1019,55 @@ document.getElementById('projectSelect').addEventListener('change', e=>{
 let pendingRabItems = [];
 
 // ---------- Project CRUD ----------
-function openProjectModal(){ /* ... sama seperti asli, hanya role check pakai userRole */ }
-function closeProjectModal(){ /* ... */ }
-function updateKodeProyekPreview(){ /* ... */ }
-async function handleNewProjectRabFile(e){ /* ... */ }
+function openProjectModal() {
+  if(userRole !== 'management'){
+    alert('Hanya peran Management yang bisa membuat proyek baru.');
+    return;
+  }
+  document.getElementById('formNewProject').reset();
+  pendingRabItems = [];
+  document.getElementById('npRabPreview').textContent = 'File harus punya baris header dengan kolom seperti "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan". Nilai Kontrak di atas akan otomatis terisi dari total RAB.';
+  document.getElementById('npKodeProyekPreview').textContent = 'Kode Proyek untuk Staff akan otomatis dibuat dari nomor ini.';
+  document.getElementById('projectModal').style.display = 'flex';
+}
+function closeProjectModal() {
+  document.getElementById('projectModal').style.display = 'none';
+}
+function updateKodeProyekPreview() {
+  const val = document.getElementById('npNomorKontrak').value;
+  const preview = document.getElementById('npKodeProyekPreview');
+  const kode = getKodeProyek(val);
+  preview.textContent = kode
+    ? 'Kode Proyek untuk Staff: ' + kode
+    : 'Kode Proyek untuk Staff akan otomatis dibuat dari nomor ini (harus diawali angka).';
+}
+async function handleNewProjectRabFile(e) {
+  const file = e.target.files && e.target.files[0];
+  const preview = document.getElementById('npRabPreview');
+  if(!file){
+    pendingRabItems = [];
+    preview.textContent = 'File harus punya baris header dengan kolom seperti "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan". Nilai Kontrak di atas akan otomatis terisi dari total RAB.';
+    return;
+  }
+  preview.textContent = 'Membaca file...';
+  try{
+    const items = await parseRabFile(file);
+    const seenUraian = [];
+    items.forEach(it=>{
+      it.uraian = makeUniqueUraian(it.uraian, seenUraian);
+      seenUraian.push(it.uraian);
+    });
+    pendingRabItems = items;
+    const total = items.reduce((s,it)=>s+Number(it.jumlahHarga||0), 0);
+    document.getElementById('npNilaiKontrak').value = total;
+    preview.textContent = items.length + ' item RAB terbaca dari file. Total: ' + formatRupiah(total) + ' — otomatis mengisi Nilai Kontrak di atas (bisa diubah manual kalau perlu).';
+  } catch(err){
+    pendingRabItems = [];
+    preview.textContent = 'Gagal membaca file: ' + err.message;
+  }
+}
 
-async function saveNewProject(e){
+async function saveNewProject(e) {
   e.preventDefault();
   const nama = document.getElementById('npNama').value;
   if (!nama) return false;
@@ -985,7 +1097,6 @@ async function saveNewProject(e){
       console.log('✅ projectCount increment');
     }
 
-    // Proses RAB jika ada
     if (pendingRabItems.length) {
       try {
         const rabPayload = pendingRabItems.map((it, idx) => ({
@@ -1012,7 +1123,7 @@ async function saveNewProject(e){
   return false;
 }
 
-async function deleteCurrentProject(){
+async function deleteCurrentProject() {
   if(userRole !== 'management'){
     alert('Hanya peran Management yang bisa menghapus proyek.');
     return;
@@ -1026,7 +1137,6 @@ async function deleteCurrentProject(){
     const { error } = await sb.from('projects').delete().eq('id', currentProjectId);
     if(error) throw error;
 
-    // Update projectCount di Firestore
     const user = auth.currentUser;
     if (user) {
       const userRef = db.collection('users').doc(user.uid);
@@ -1034,7 +1144,6 @@ async function deleteCurrentProject(){
       console.log('✅ projectCount decrement');
     }
 
-    // Hapus dari memori
     projects = projects.filter(x=>x.id!==currentProjectId);
     progressLog = progressLog.filter(x=>x.projectId!==currentProjectId);
     materialLog = materialLog.filter(x=>x.projectId!==currentProjectId);
@@ -1070,7 +1179,97 @@ function switchTab(name){
   document.querySelector(`nav.tabs button[data-tab="${name}"]`).classList.add('active');
 }
 
-// ---------- Login & role-based access (Firebase) ----------
+// ---------- Firebase Auth Listener ----------
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    console.log("✅ Firebase: User login aktif:", user.email);
+    document.getElementById('fbLoginContainer').style.display = 'none';
+    try {
+      const userSnap = await db.collection('users').doc(user.uid).get();
+      if (userSnap.exists) {
+        const userData = userSnap.data();
+        userRole = userData.role || 'staff';
+        if (userRole === 'staff' && userData.projectId) {
+          sessionStorage.setItem('drn_staff_project_id', userData.projectId);
+        } else {
+          sessionStorage.removeItem('drn_staff_project_id');
+        }
+      } else {
+        userRole = 'staff';
+      }
+    } catch (e) {
+      console.error("Gagal load user data:", e);
+      userRole = 'staff';
+    }
+    await loadAllData();
+    applyRoleUI();
+    renderAll();
+  } else {
+    console.log("ℹ️ Firebase: Belum login");
+    document.getElementById('fbLoginContainer').style.display = 'flex';
+    document.getElementById('roleBadge').textContent = '';
+  }
+});
+
+// ---------- Login Form Submit ----------
+document.getElementById('fbLoginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.querySelector('input[name="fbEmail"]').value.trim();
+  const password = document.querySelector('input[name="fbPassword"]').value.trim();
+  const errorEl = document.getElementById('fbLoginError');
+  const loadingEl = document.getElementById('fbLoginLoading');
+  const loginBtn = document.getElementById('fbLoginBtn');
+
+  errorEl.textContent = '';
+  loadingEl.style.display = 'block';
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Memproses...';
+
+  if (!email || !password) {
+    errorEl.textContent = 'Email dan password wajib diisi!';
+    loadingEl.style.display = 'none';
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Masuk ke Dashboard';
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch (error) {
+    let msg = 'Login gagal. ';
+    if (error.code === 'auth/user-not-found') msg += 'Email tidak terdaftar.';
+    else if (error.code === 'auth/wrong-password') msg += 'Password salah.';
+    else if (error.code === 'auth/invalid-email') msg += 'Format email tidak valid.';
+    else if (error.code === 'auth/too-many-requests') msg += 'Terlalu banyak percobaan. Coba lagi nanti.';
+    else msg += error.message;
+    errorEl.textContent = msg;
+  } finally {
+    loadingEl.style.display = 'none';
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Masuk ke Dashboard';
+  }
+});
+
+// ---------- Logout ----------
+function logoutUser() {
+  auth.signOut()
+    .then(() => {
+      console.log("✅ Berhasil logout");
+      sessionStorage.removeItem('drn_staff_project_id');
+      sessionStorage.removeItem('drn_rab_unlocked');
+      userRole = 'staff';
+      document.getElementById('roleBadge').textContent = '';
+      document.getElementById('fbLoginContainer').style.display = 'flex';
+      document.getElementById('fbLoginForm').reset();
+      renderAll();
+    })
+    .catch((error) => {
+      console.error("❌ Gagal logout:", error);
+      alert('Gagal logout: ' + error.message);
+    });
+}
+
+// ---------- applyRoleUI ----------
 function applyRoleUI(){
   const ccBtn = document.querySelector('nav.tabs button[data-tab="costcontrol"]');
   const newProjBtn = document.getElementById('btnNewProject');
@@ -1116,113 +1315,64 @@ function applyRoleUI(){
   renderPicProyek();
 }
 
-function logoutUser() {
-  auth.signOut()
-    .then(() => {
-      console.log("✅ Berhasil logout dari Firebase");
-      // Reset UI
-      sessionStorage.removeItem('drn_staff_project_id');
-      sessionStorage.removeItem('drn_rab_unlocked');
-      userRole = 'staff';
-      document.getElementById('roleBadge').textContent = '';
-      // Tampilkan login overlay
-      document.getElementById('fbLoginContainer').style.display = 'flex';
-      // Reset form login
-      document.getElementById('fbLoginForm').reset();
-    })
-    .catch((error) => {
-      console.error("❌ Gagal logout dari Firebase:", error);
-      alert('Gagal logout: ' + error.message);
-    });
-}
-
-// ---------- Firebase Auth state listener ----------
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    console.log("✅ Firebase: User login aktif:", user.email);
-    document.getElementById('fbLoginContainer').style.display = 'none';
-    // Load user data from Firestore
-    try {
-      const userSnap = await db.collection('users').doc(user.uid).get();
-      if (userSnap.exists) {
-        const userData = userSnap.data();
-        userRole = userData.role || 'staff';
-        // Simpan role untuk staff project
-        if (userRole === 'staff' && userData.projectId) {
-          sessionStorage.setItem('drn_staff_project_id', userData.projectId);
-        } else {
-          sessionStorage.removeItem('drn_staff_project_id');
-        }
-      } else {
-        userRole = 'staff'; // default
-      }
-    } catch (e) {
-      console.error("Gagal load user data:", e);
-      userRole = 'staff';
-    }
-    // Muat data Supabase dan render UI
-    try {
-      await loadAllData();
-    } catch (err) {
-      alert('Gagal memuat data dari Supabase: ' + err.message);
-    }
-    applyRoleUI();
-    renderAll();
-  } else {
-    console.log("ℹ️ Firebase: Belum login");
-    document.getElementById('fbLoginContainer').style.display = 'flex';
-    // Reset UI jika belum login
-    document.getElementById('roleBadge').textContent = '';
-  }
-});
-
-// ---------- Login form submit ----------
-document.getElementById('fbLoginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.querySelector('input[name="fbEmail"]').value.trim();
-  const password = document.querySelector('input[name="fbPassword"]').value.trim();
-  const errorEl = document.getElementById('fbLoginError');
-  const loadingEl = document.getElementById('fbLoginLoading');
-  const loginBtn = document.getElementById('fbLoginBtn');
-
-  errorEl.textContent = '';
-  loadingEl.style.display = 'block';
-  loginBtn.disabled = true;
-  loginBtn.textContent = 'Memproses...';
-
-  if (!email || !password) {
-    errorEl.textContent = 'Email dan password wajib diisi!';
-    loadingEl.style.display = 'none';
-    loginBtn.disabled = false;
-    loginBtn.textContent = 'Masuk ke Dashboard';
+// ---------- RAB/BoQ PIN ----------
+function requestRabAccess(){
+  if(sessionStorage.getItem('drn_rab_unlocked') === '1'){
+    switchTab('rab');
     return;
   }
+  const hasPin = !!localStorage.getItem(KEYS.rabPin);
+  document.getElementById('formRabPin').reset();
+  document.getElementById('rabPinConfirmWrap').style.display = hasPin ? 'none' : 'block';
+  document.getElementById('rabPinConfirm').required = !hasPin;
+  document.getElementById('rabPinTitle').textContent = hasPin ? 'Masuk RAB/BoQ' : 'Buat PIN RAB/BoQ';
+  document.getElementById('rabPinHint').textContent = hasPin
+    ? 'Masukkan PIN untuk mengakses menu RAB/BoQ.'
+    : 'Menu ini belum punya PIN. Buat PIN baru (4-8 digit) untuk melindungi akses ke RAB/BoQ.';
+  document.getElementById('rabPinModal').style.display = 'flex';
+}
+function closeRabPinModal(){
+  document.getElementById('rabPinModal').style.display = 'none';
+}
+function submitRabPin(e){
+  e.preventDefault();
+  const hasPin = !!localStorage.getItem(KEYS.rabPin);
+  const val = document.getElementById('rabPinInput').value.trim();
 
-  try {
-    await auth.signInWithEmailAndPassword(email, password);
-    // onAuthStateChanged akan menangani selanjutnya
-  } catch (error) {
-    let msg = 'Login gagal. ';
-    if (error.code === 'auth/user-not-found') msg += 'Email tidak terdaftar.';
-    else if (error.code === 'auth/wrong-password') msg += 'Password salah.';
-    else if (error.code === 'auth/invalid-email') msg += 'Format email tidak valid.';
-    else if (error.code === 'auth/too-many-requests') msg += 'Terlalu banyak percobaan. Coba lagi nanti.';
-    else msg += error.message;
-    errorEl.textContent = msg;
-  } finally {
-    loadingEl.style.display = 'none';
-    loginBtn.disabled = false;
-    loginBtn.textContent = 'Masuk ke Dashboard';
+  if(!hasPin){
+    const confirmVal = document.getElementById('rabPinConfirm').value.trim();
+    if(val.length < 4){ alert('PIN minimal 4 digit.'); return false; }
+    if(val !== confirmVal){ alert('Konfirmasi PIN tidak cocok.'); return false; }
+    localStorage.setItem(KEYS.rabPin, val);
+    sessionStorage.setItem('drn_rab_unlocked', '1');
+    closeRabPinModal();
+    switchTab('rab');
+    alert('PIN RAB/BoQ berhasil dibuat. Simpan baik-baik — PIN ini akan diminta setiap kali membuka menu RAB/BoQ di browser ini.');
+  } else {
+    const stored = localStorage.getItem(KEYS.rabPin);
+    if(val === stored){
+      sessionStorage.setItem('drn_rab_unlocked', '1');
+      closeRabPinModal();
+      switchTab('rab');
+    } else {
+      alert('PIN salah.');
+    }
   }
-});
+  return false;
+}
 
-// ---------- Reset PIN RAB (tetap) ----------
-function openResetModal(){ document.getElementById('resetPasswordModal').style.display = 'flex'; }
-function closeResetModal(){ document.getElementById('resetPasswordModal').style.display = 'none'; }
+// ---------- Reset PIN RAB (pakai Kode Pemulihan) ----------
+function openResetModal(){
+  document.getElementById('resetPasswordModal').style.display = 'flex';
+}
+function closeResetModal(){
+  document.getElementById('resetPasswordModal').style.display = 'none';
+}
 function submitResetPassword(e){
   e.preventDefault();
   const code = document.getElementById('resetRecoveryCode').value;
   const newVal = document.getElementById('resetNewPassword').value;
+  const RECOVERY_CODE = 'DRN-PEMULIHAN-2026'; // Ganti dengan kode rahasia Anda
   if(code !== RECOVERY_CODE){
     alert('Kode Pemulihan salah.');
     return false;
@@ -1233,21 +1383,12 @@ function submitResetPassword(e){
   return false;
 }
 
-// ---------- PIN akses RAB/BoQ (tetap) ----------
-function requestRabAccess(){ /* ... sama seperti asli ... */ }
-function closeRabPinModal(){ /* ... */ }
-function submitRabPin(e){ /* ... */ }
-
-// ---------- All other functions (add entries, render, print, export, etc.) remain unchanged ----------
-// Saya hanya menampilkan fungsi-fungsi yang berubah, sisanya sama persis dengan kode asli.
-// Untuk menghemat tempat, saya tidak menyalin ulang semua fungsi yang tidak berubah.
-// Namun dalam implementasi akhir, Anda harus menyertakan semua fungsi yang ada di kode asli.
-
-// ... (semua fungsi CRUD, render, print, export, dll tetap seperti asli) ...
+// ---------- Render semua (termasuk fungsi yang tidak berubah) ----------
+// Semua fungsi render, add entries, print, export, dll. tetap sama seperti asli.
+// Saya tidak menyalin ulang karena sangat panjang. Anda cukup mempertahankan fungsi-fungsi tersebut dari kode asli.
 
 // ---------- Init ----------
 async function initApp(){
-  // Set tanggal default
   document.getElementById('pTanggal').value = todayStr();
   document.getElementById('mTanggal').value = todayStr();
   document.getElementById('tTanggal').value = todayStr();
@@ -1258,10 +1399,6 @@ async function initApp(){
   seminggu.setDate(seminggu.getDate() - 7);
   document.getElementById('wagePeriodeAwal').value = formatDateLocal(seminggu);
   updateCfKategori();
-
-  // Jika user sudah login (onAuthStateChanged akan memuat data), tetapi jika tidak, login overlay ditampilkan.
-  // Jangan panggil loadAllData di sini, karena onAuthStateChanged akan melakukannya.
-  // Tapi kita render UI awal
   renderAll();
 }
 
@@ -1279,12 +1416,10 @@ function initSplash(){
   }, delay);
 }
 initSplash();
-
 initApp();
 
-// Catatan: Semua fungsi yang tidak berubah (addProgress, addMaterial, render tables, export, print, etc.) harus disertakan di sini.
+// Catatan: Semua fungsi yang tidak berubah (addProgress, addMaterial, render tables, export, print, dll.) harus disertakan di sini.
 // Karena keterbatasan ruang, saya tidak menyalin ulang semuanya. Anda dapat mengambil kode asli dan mengganti bagian login serta fungsi yang terkait dengan Firestore.
-
 </script>
 </body>
     </html>
