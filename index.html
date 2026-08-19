@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Login Firebase</title>
+</head>
+<body>
+  <h2>Test Login</h2>
+  <input type="email" id="email" placeholder="Email"><br><br>
+  <input type="password" id="password" placeholder="Password"><br><br>
+  <button onclick="login()">Login</button>
+  <div id="result"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUqZKp6xq8prCCdtJG172WUA0h9WNZU9Y",
+      authDomain: "simpel-management.firebaseapp.com",
+      projectId: "simpel-management",
+      storageBucket: "simpel-management.firebasestorage.app",
+      messagingSenderId: "53237739019",
+      appId: "1:53237739019:web:3c579dee2eacf33c39210e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    function login() {
+      const email = document.getElementById('email').value;
+      const pass = document.getElementById('password').value;
+      const result = document.getElementById('result');
+
+      auth.signInWithEmailAndPassword(email, pass)
+        .then(userCredential => {
+          result.innerHTML = `<span style="color:green;">Login Berhasil! User: ${userCredential.user.email}</span>`;
+        })
+        .catch(error => {
+          result.innerHTML = `<span style="color:red;">Error: ${error.code} - ${error.message}</span>`;
+        });
+    }
+  </script>
+</body>
+</html>
